@@ -33,10 +33,10 @@ requirement: <paste R-12 here>
 
 | Criterion | Run a | Run b |
 |---|---|---|
-| Uses the scenario's numbers (latency, peak, MailFast limits)? | | |
-| Options considered (list them) | | |
-| Handles "exactly once" loyalty points and MailFast's rate limit? How? | | |
-| Anything invented (a number, tool or fact not in the scenario)? | | |
+| Uses the scenario's numbers (latency, peak, MailFast limits)? | No. It had no scenario and listed the numbers as open questions | Yes: 500 ms, 200 orders/s, MailFast p95/p99 and 50/s, 1 minute |
+| Options considered (list them) | Sync calls; message broker (RabbitMQ or Kafka); polling job | Sync gRPC; RabbitMQ; in-process goroutines; Kafka |
+| Handles "exactly once" loyalty points and MailFast's rate limit? How? | Only says "consumers must be idempotent"; no rate limit | Unique key on `order_id`; email worker rate-limited and buffered by the queue |
+| Anything invented (a number, tool or fact not in the scenario)? | Suggested an outbox, but no numbers invented | Invented quorum queues and "clustered RabbitMQ" (not in the scenario); the 50 ms timeout, 3-node cluster and 40 emails/s were added in my edit |
 
 ## Take ownership: your final ADR
 
@@ -49,6 +49,6 @@ You will defend this ADR in front of a review board in Part B, so make sure you 
 
 | # | What you changed from the AI's draft | Why |
 |---|---|---|
-| 1 | | |
-| 2 | | |
-| 3 | | |
+| 1 | Lowered the email rate limit to 40/s (below MailFast's 50/s) and computed the backlog (about 160/s, about 40 min for a 10-minute peak) | The draft ignored that 200 orders/s is four times MailFast's limit |
+| 2 | Added reconciliation job and outbox as mitigations for a lost event, instead of only "retry" | The draft's "never fail an order" conflicts with "points exactly once"; a lost event needs a recovery path |
+| 3 | Gave the publish timeout a starting value (about 50 ms, "to be tuned in the load test") and added a post-sale review of queue depth and oldest email age to Validation | A bare "short timeout" cannot be tested; the 50 ms is my assumption, not from the scenario |
